@@ -6,6 +6,9 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import dev.layla.notesapi.note.dto.UpdateNoteRequest;
+import org.springframework.http.ResponseEntity;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/notes")
@@ -31,6 +34,17 @@ public class NoteController {
     @GetMapping("/{id}")
     public NoteResponse getById(@PathVariable Long id) {
         return noteService.getById(id);
+    }
+
+    @PutMapping("/{id}")
+    public NoteResponse update(@PathVariable Long id, @Valid @RequestBody UpdateNoteRequest request) {
+        return noteService.update(id, request);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Map<String, String>> delete(@PathVariable Long id) {
+        noteService.delete(id);
+        return ResponseEntity.ok(Map.of("message", "Note deleted successfully"));
     }
 
 }
