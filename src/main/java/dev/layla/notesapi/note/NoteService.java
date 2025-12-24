@@ -7,40 +7,34 @@ import org.springframework.stereotype.Service;
 
 import dev.layla.notesapi.note.exception.NoteNotFoundException;
 import dev.layla.notesapi.note.dto.UpdateNoteRequest;
+import dev.layla.notesapi.note.mapper.NoteMapper;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+
 
 @Service
 public class NoteService {
 
     private final NoteRepository noteRepository;
+    private final NoteMapper noteMapper;
 
-    public NoteService(NoteRepository noteRepository) {
+    public NoteService(NoteRepository noteRepository, NoteMapper noteMapper) {
         this.noteRepository = noteRepository;
+        this.noteMapper = noteMapper;
     }
 
     public NoteResponse create(CreateNoteRequest request) {
         Note note = new Note(request.getTitle(), request.getContent());
         Note saved = noteRepository.save(note);
 
-        return new NoteResponse(
-                saved.getId(),
-                saved.getTitle(),
-                saved.getContent(),
-                saved.getCreatedAt(),
-                saved.isArchived());
+        return noteMapper.toResponse(saved);
     }
 
     public List<NoteResponse> getAll() {
         return noteRepository.findAll()
                 .stream()
-                .map(note -> new NoteResponse(
-                        note.getId(),
-                        note.getTitle(),
-                        note.getContent(),
-                        note.getCreatedAt(),
-                        note.isArchived()))
+                .map(noteMapper::toResponse)
                 .toList();
     }
 
@@ -48,12 +42,7 @@ public class NoteService {
         Note note = noteRepository.findById(id)
                 .orElseThrow(() -> new NoteNotFoundException(id));
 
-        return new NoteResponse(
-                note.getId(),
-                note.getTitle(),
-                note.getContent(),
-                note.getCreatedAt(),
-                note.isArchived());
+        return noteMapper.toResponse(note);
     }
 
     @Transactional
@@ -75,12 +64,7 @@ public class NoteService {
 
         Note saved = noteRepository.save(note);
 
-        return new NoteResponse(
-                saved.getId(),
-                saved.getTitle(),
-                saved.getContent(),
-                saved.getCreatedAt(),
-                saved.isArchived());
+        return noteMapper.toResponse(saved);
     }
 
     public void delete(Long id) {
