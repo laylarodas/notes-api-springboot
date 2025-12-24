@@ -9,6 +9,9 @@ import dev.layla.notesapi.note.exception.NoteNotFoundException;
 import dev.layla.notesapi.note.dto.UpdateNoteRequest;
 import dev.layla.notesapi.note.mapper.NoteMapper;
 import org.springframework.transaction.annotation.Transactional;
+import dev.layla.notesapi.user.User;
+import dev.layla.notesapi.user.UserRepository;
+import dev.layla.notesapi.user.exception.UserNotFoundException;
 
 import java.util.List;
 
@@ -18,16 +21,21 @@ public class NoteService {
 
     private final NoteRepository noteRepository;
     private final NoteMapper noteMapper;
+    private final UserRepository userRepository;
 
-    public NoteService(NoteRepository noteRepository, NoteMapper noteMapper) {
+    public NoteService(NoteRepository noteRepository, NoteMapper noteMapper, UserRepository userRepository) {
         this.noteRepository = noteRepository;
         this.noteMapper = noteMapper;
+        this.userRepository = userRepository;
     }
 
     public NoteResponse create(CreateNoteRequest request) {
-        Note note = new Note(request.getTitle(), request.getContent());
+        User owner = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new UserNotFoundException(request.getUserId()));
+        
+        Note note = new Note(request.getTitle(), request.getContent(), owner);
         Note saved = noteRepository.save(note);
-
+        
         return noteMapper.toResponse(saved);
     }
 
