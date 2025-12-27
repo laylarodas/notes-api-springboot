@@ -5,10 +5,13 @@ import dev.layla.notesapi.note.dto.NoteResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-import java.util.List;
 import dev.layla.notesapi.note.dto.UpdateNoteRequest;
 import org.springframework.http.ResponseEntity;
 import java.util.Map;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @RestController
 @RequestMapping("/notes")
@@ -26,11 +29,6 @@ public class NoteController {
         return noteService.create(request);
     }
 
-    @GetMapping
-    public List<NoteResponse> getAll() {
-        return noteService.getAll();
-    }
-
     @GetMapping("/{id}")
     public NoteResponse getById(@PathVariable Long id) {
         return noteService.getById(id);
@@ -45,6 +43,14 @@ public class NoteController {
     public ResponseEntity<Map<String, String>> delete(@PathVariable Long id) {
         noteService.delete(id);
         return ResponseEntity.ok(Map.of("message", "Note deleted successfully"));
+    }
+
+    @GetMapping
+    public Page<NoteResponse> getAll(
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) Boolean archived,
+            @PageableDefault(size = 10) Pageable pageable) {
+        return noteService.getAll(userId, archived, pageable);
     }
 
 }

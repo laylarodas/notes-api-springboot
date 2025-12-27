@@ -4,7 +4,6 @@ import dev.layla.notesapi.note.dto.CreateNoteRequest;
 import dev.layla.notesapi.note.dto.NoteResponse;
 import org.springframework.stereotype.Service;
 
-
 import dev.layla.notesapi.note.exception.NoteNotFoundException;
 import dev.layla.notesapi.note.dto.UpdateNoteRequest;
 import dev.layla.notesapi.note.mapper.NoteMapper;
@@ -13,8 +12,8 @@ import dev.layla.notesapi.user.User;
 import dev.layla.notesapi.user.UserRepository;
 import dev.layla.notesapi.user.exception.UserNotFoundException;
 
-import java.util.List;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Service
 public class NoteService {
@@ -32,18 +31,28 @@ public class NoteService {
     public NoteResponse create(CreateNoteRequest request) {
         User owner = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new UserNotFoundException(request.getUserId()));
-        
+
         Note note = new Note(request.getTitle(), request.getContent(), owner);
         Note saved = noteRepository.save(note);
-        
+
         return noteMapper.toResponse(saved);
     }
 
-    public List<NoteResponse> getAll() {
-        return noteRepository.findAll()
-                .stream()
-                .map(noteMapper::toResponse)
-                .toList();
+    public Page<NoteResponse> getAll(Long userId, Boolean archived, Pageable pageable) {
+
+        Page<Note> page;
+
+        if (userId != null && archived != null) {
+            page = noteRepository.findAllByOwnerIdAndArchived(userId, archived, pageable);
+        } else if (userId != null) {
+            page = noteRepository.findAllByOwnerId(userId, pageable);
+        } else if (archived != null) {
+            page = noteRepository.findAllByArchived(archived, pageable);
+        } else {
+            page = noteRepository.findAll(pageable);
+        }
+
+        return page.map(noteMapper::toResponse);
     }
 
     public NoteResponse getById(Long id) {
