@@ -4,6 +4,7 @@ import dev.layla.notesapi.note.dto.CreateNoteRequest;
 import dev.layla.notesapi.note.dto.NoteResponse;
 import org.springframework.stereotype.Service;
 
+import dev.layla.notesapi.note.exception.NoteAccessDeniedException;
 import dev.layla.notesapi.note.exception.NoteNotFoundException;
 import dev.layla.notesapi.note.dto.UpdateNoteRequest;
 import dev.layla.notesapi.note.mapper.NoteMapper;
@@ -79,14 +80,60 @@ public class NoteService {
             note.setArchived(request.getArchived());
         }
 
-        Note saved = noteRepository.save(note);
-
-        return noteMapper.toResponse(saved);
+        return noteMapper.toResponse(noteRepository.save(note));
     }
 
     public void delete(Long id) {
         Note note = noteRepository.findById(id)
                 .orElseThrow(() -> new NoteNotFoundException(id));
         noteRepository.delete(note);
+    }
+
+    @Transactional
+    public NoteResponse updateForUser(Long userId, Long noteId, UpdateNoteRequest request) {
+        Note note = noteRepository.findById(noteId)
+                .orElseThrow(() -> new NoteNotFoundException(noteId));
+
+        if (!note.getOwner().getId().equals(userId)) {
+            throw new NoteAccessDeniedException(noteId, userId);
+        }
+
+        if (request.getTitle() != null && !request.getTitle().isBlank()) {
+            note.setTitle(request.getTitle());
+        }
+
+        if (request.getContent() != null) {
+            note.setContent(request.getContent());
+        }
+
+        if (request.getArchived() != null) {
+            note.setArchived(request.getArchived());
+        }
+
+        Note saved = noteRepository.save(note);
+
+        return noteMapper.toResponse(saved);
+    }
+
+    public void deleteForUser(Long userId, Long noteId) {
+        Note note = noteRepository.findById(noteId)
+                .orElseThrow(() -> new NoteNotFoundException(noteId));
+
+        if (!note.getOwner().getId().equals(userId)) {
+            throw new NoteAccessDeniedException(noteId, userId);
+        }
+        noteRepository.delete(note);
+    }
+
+    public Page<NoteResponse> getAllByUser(Long userId, Pageable pageable) {
+        // valida que el user exista (opcional pero pro)
+        userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException(userId));
+        return noteRepository.findAllByOwnerId(userId, pageable).map(noteMapper::toResponse);
+    }
+
+    public NoteResponse createForUser(Long userId, CreateNoteRequest request) {
+        User owner = userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException(userId));
+        Note saved = noteRepository.save(new Note(request.getTitle(), request.getContent(), owner));
+        return noteMapper.toResponse(saved);
     }
 }

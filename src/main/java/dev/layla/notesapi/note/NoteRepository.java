@@ -11,4 +11,6 @@ public interface NoteRepository extends JpaRepository<Note, Long> {
     Page<Note> findAllByArchived(boolean archived, Pageable pageable);
 
     Page<Note> findAllByOwnerIdAndArchived(Long ownerId, boolean archived, Pageable pageable);
+
+    boolean existsByIdAndOwnerId(Long id, Long ownerId);
 }

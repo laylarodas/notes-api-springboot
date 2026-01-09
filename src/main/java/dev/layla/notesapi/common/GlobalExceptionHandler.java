@@ -2,6 +2,7 @@ package dev.layla.notesapi.common;
 
 import dev.layla.notesapi.note.exception.NoteNotFoundException;
 import dev.layla.notesapi.user.exception.UserNotFoundException;
+import dev.layla.notesapi.note.exception.NoteAccessDeniedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -30,6 +31,15 @@ public class GlobalExceptionHandler {
                 ex.getMessage(),
                 LocalDateTime.now());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
+    }
+
+    @ExceptionHandler(NoteAccessDeniedException.class)
+    public ResponseEntity<ApiError> handleNoteAccessDenied(NoteAccessDeniedException ex) {
+        ApiError body = new ApiError(
+                HttpStatus.FORBIDDEN.value(),
+                ex.getMessage(),
+                LocalDateTime.now());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
     }
 
 }

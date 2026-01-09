@@ -3,6 +3,9 @@ package dev.layla.notesapi.user;
 import dev.layla.notesapi.user.dto.CreateUserRequest;
 import dev.layla.notesapi.user.dto.UpdateUserRequest;
 import dev.layla.notesapi.user.dto.UserResponse;
+import dev.layla.notesapi.note.dto.CreateNoteRequest;
+import dev.layla.notesapi.note.dto.NoteResponse;
+import dev.layla.notesapi.note.NoteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -18,9 +21,11 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+    private final NoteService noteService;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, NoteService noteService) {
         this.userService = userService;
+        this.noteService = noteService;
     }
 
     @PostMapping
@@ -53,6 +58,24 @@ public class UserController {
     @Operation(summary = "Eliminar usuario", description = "Elimina un usuario y todas sus notas")
     public void delete(@PathVariable Long id) {
         userService.delete(id);
+    }
+
+    
+    @GetMapping("/{userId}/notes")
+    public Page<NoteResponse> getUserNotes(
+            @PathVariable Long userId,
+            @PageableDefault(size = 10) Pageable pageable
+    ) {
+        return noteService.getAllByUser(userId, pageable);
+    }
+    
+    @PostMapping("/{userId}/notes")
+    @ResponseStatus(HttpStatus.CREATED)
+    public NoteResponse createNoteForUser(
+            @PathVariable Long userId,
+            @Valid @RequestBody CreateNoteRequest request
+    ) {
+        return noteService.createForUser(userId, request);
     }
 }
 
