@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 /**
- * DTO para crear un usuario.
+ * DTO para crear un usuario (registro).
  */
 public record CreateUserRequest(
         @NotBlank(message = "name is required")
@@ -15,5 +15,9 @@ public record CreateUserRequest(
         @NotBlank(message = "email is required")
         @Email(message = "email must be a valid email address")
         @Size(max = 150, message = "email must be at most 150 characters")
-        String email
+        String email,
+
+        @NotBlank(message = "password is required")
+        @Size(min = 6, max = 100, message = "password must be between 6 and 100 characters")
+        String password
 ) {}

@@ -34,7 +34,7 @@ class NoteServiceTest {
         // Arrange - Usando constructor de record
         CreateNoteRequest req = new CreateNoteRequest("Test note", "Hello", 1L);
 
-        User owner = new User("Layla", "layla@example.com");
+        User owner = new User("Layla", "layla@example.com", "password123");
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(owner));
 

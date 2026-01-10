@@ -45,7 +45,7 @@ class UserControllerIntegrationTest {
 
     @Test
     void postUsers_shouldReturn201_andCreatedUser() throws Exception {
-        CreateUserRequest req = new CreateUserRequest("Layla", "layla@example.com");
+        CreateUserRequest req = new CreateUserRequest("Layla", "layla@example.com", "password123");
 
         mockMvc.perform(post("/users")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -62,7 +62,7 @@ class UserControllerIntegrationTest {
     @Test
     void postUsers_shouldReturn400_whenNameMissing() throws Exception {
         // name es null
-        CreateUserRequest req = new CreateUserRequest(null, "test@example.com");
+        CreateUserRequest req = new CreateUserRequest(null, "test@example.com", "password123");
 
         mockMvc.perform(post("/users")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -76,7 +76,7 @@ class UserControllerIntegrationTest {
 
     @Test
     void postUsers_shouldReturn400_whenEmailInvalid() throws Exception {
-        CreateUserRequest req = new CreateUserRequest("Test", "not-an-email");
+        CreateUserRequest req = new CreateUserRequest("Test", "not-an-email", "password123");
 
         mockMvc.perform(post("/users")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -87,7 +87,7 @@ class UserControllerIntegrationTest {
 
     @Test
     void postUsers_shouldReturn400_whenEmailMissing() throws Exception {
-        CreateUserRequest req = new CreateUserRequest("Test", null);
+        CreateUserRequest req = new CreateUserRequest("Test", null, "password123");
 
         mockMvc.perform(post("/users")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -101,8 +101,8 @@ class UserControllerIntegrationTest {
     @Test
     void getUsers_shouldReturnPageOfUsers() throws Exception {
         // Arrange: crear algunos usuarios
-        userRepository.save(new User("User1", "user1@example.com"));
-        userRepository.save(new User("User2", "user2@example.com"));
+        userRepository.save(new User("User1", "user1@example.com", "password123"));
+        userRepository.save(new User("User2", "user2@example.com", "password123"));
 
         mockMvc.perform(get("/users"))
                 .andExpect(status().isOk())
@@ -123,7 +123,7 @@ class UserControllerIntegrationTest {
 
     @Test
     void getUserById_shouldReturn200_whenExists() throws Exception {
-        User saved = userRepository.save(new User("Layla", "layla@example.com"));
+        User saved = userRepository.save(new User("Layla", "layla@example.com", "password123"));
 
         mockMvc.perform(get("/users/{id}", saved.getId()))
                 .andExpect(status().isOk())
@@ -145,7 +145,7 @@ class UserControllerIntegrationTest {
 
     @Test
     void putUser_shouldUpdateFields_whenExists() throws Exception {
-        User saved = userRepository.save(new User("Old Name", "old@example.com"));
+        User saved = userRepository.save(new User("Old Name", "old@example.com", "password123"));
 
         UpdateUserRequest req = new UpdateUserRequest("New Name", "new@example.com");
 
@@ -160,7 +160,7 @@ class UserControllerIntegrationTest {
 
     @Test
     void putUser_shouldUpdateOnlyName_whenEmailNotProvided() throws Exception {
-        User saved = userRepository.save(new User("Old Name", "keep@example.com"));
+        User saved = userRepository.save(new User("Old Name", "keep@example.com", "password123"));
 
         UpdateUserRequest req = new UpdateUserRequest("New Name", null);
 
@@ -186,7 +186,7 @@ class UserControllerIntegrationTest {
 
     @Test
     void putUser_shouldReturn400_whenEmailInvalid() throws Exception {
-        User saved = userRepository.save(new User("Test", "test@example.com"));
+        User saved = userRepository.save(new User("Test", "test@example.com", "password123"));
 
         UpdateUserRequest req = new UpdateUserRequest(null, "invalid-email");
 
@@ -201,7 +201,7 @@ class UserControllerIntegrationTest {
 
     @Test
     void deleteUser_shouldReturn204_andThenUserIsGone() throws Exception {
-        User saved = userRepository.save(new User("To Delete", "delete@example.com"));
+        User saved = userRepository.save(new User("To Delete", "delete@example.com", "password123"));
 
         mockMvc.perform(delete("/users/{id}", saved.getId()))
                 .andExpect(status().isNoContent());
@@ -222,7 +222,7 @@ class UserControllerIntegrationTest {
     @Test
     void deleteUser_shouldAlsoDeleteUserNotes() throws Exception {
         // Crear usuario con notas
-        User user = userRepository.save(new User("With Notes", "notes@example.com"));
+        User user = userRepository.save(new User("With Notes", "notes@example.com", "password123"));
         noteRepository.save(new Note("Note 1", "Content 1", user));
         noteRepository.save(new Note("Note 2", "Content 2", user));
 
@@ -240,7 +240,7 @@ class UserControllerIntegrationTest {
 
     @Test
     void getUserNotes_shouldReturnNotesForUser() throws Exception {
-        User user = userRepository.save(new User("Note Owner", "owner@example.com"));
+        User user = userRepository.save(new User("Note Owner", "owner@example.com", "password123"));
         noteRepository.save(new Note("My Note 1", "Content 1", user));
         noteRepository.save(new Note("My Note 2", "Content 2", user));
 

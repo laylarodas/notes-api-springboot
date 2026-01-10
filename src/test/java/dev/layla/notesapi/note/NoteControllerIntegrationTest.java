@@ -39,7 +39,7 @@ class NoteControllerIntegrationTest {
         noteRepository.deleteAll();
         userRepository.deleteAll();
 
-        User user = new User("Layla", "layla@example.com");
+        User user = new User("Layla", "layla@example.com", "password123");
         user = userRepository.save(user);
         userId = user.getId();
     }

@@ -7,6 +7,7 @@ import dev.layla.notesapi.user.exception.UserNotFoundException;
 import dev.layla.notesapi.user.mapper.UserMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,14 +16,23 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final UserMapper userMapper;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository, UserMapper userMapper) {
+    public UserService(UserRepository userRepository, UserMapper userMapper, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.userMapper = userMapper;
+        this.passwordEncoder = passwordEncoder;
     }
 
+    /**
+     * Crea un nuevo usuario con password hasheado.
+     * NUNCA guardamos el password en texto plano.
+     */
     public UserResponse create(CreateUserRequest request) {
-        User user = new User(request.name(), request.email());
+        // Hasheamos el password antes de guardar
+        String hashedPassword = passwordEncoder.encode(request.password());
+        
+        User user = new User(request.name(), request.email(), hashedPassword);
         User saved = userRepository.save(user);
         return userMapper.toResponse(saved);
     }
@@ -61,4 +71,3 @@ public class UserService {
         userRepository.delete(user);
     }
 }
-
