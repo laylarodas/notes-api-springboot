@@ -26,17 +26,13 @@ class NoteServiceTest {
         noteRepository = mock(NoteRepository.class);
         userRepository = mock(UserRepository.class);
         noteMapper = new NoteMapper();
-        noteService = new NoteService(noteRepository, noteMapper, userRepository); 
-        // 👆 Ajusta el orden si tu constructor está diferente
+        noteService = new NoteService(noteRepository, noteMapper, userRepository);
     }
 
     @Test
     void create_shouldCreateNote_whenUserExists() {
-        // Arrange
-        CreateNoteRequest req = new CreateNoteRequest();
-        req.setTitle("Test note");
-        req.setContent("Hello");
-        req.setUserId(1L);
+        // Arrange - Usando constructor de record
+        CreateNoteRequest req = new CreateNoteRequest("Test note", "Hello", 1L);
 
         User owner = new User("Layla", "layla@example.com");
 
@@ -49,10 +45,10 @@ class NoteServiceTest {
         // Act
         var res = noteService.create(req);
 
-        // Assert
-        assertEquals("Test note", res.getTitle());
-        assertEquals("Hello", res.getContent());
-        assertFalse(res.isArchived());
+        // Assert - Usando accesores de record (sin "get")
+        assertEquals("Test note", res.title());
+        assertEquals("Hello", res.content());
+        assertFalse(res.archived());
 
         verify(userRepository).findById(1L);
         verify(noteRepository).save(any(Note.class));
@@ -60,11 +56,8 @@ class NoteServiceTest {
 
     @Test
     void create_shouldThrowUserNotFound_whenUserDoesNotExist() {
-        // Arrange
-        CreateNoteRequest req = new CreateNoteRequest();
-        req.setTitle("Test note");
-        req.setContent("Hello");
-        req.setUserId(999L);
+        // Arrange - Usando constructor de record
+        CreateNoteRequest req = new CreateNoteRequest("Test note", "Hello", 999L);
 
         when(userRepository.findById(999L)).thenReturn(Optional.empty());
 
@@ -75,4 +68,3 @@ class NoteServiceTest {
         verify(noteRepository, never()).save(any());
     }
 }
-

@@ -2,9 +2,9 @@ package dev.layla.notesapi.note;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.layla.notesapi.note.dto.CreateNoteRequest;
+import dev.layla.notesapi.note.dto.UpdateNoteRequest;
 import dev.layla.notesapi.user.User;
 import dev.layla.notesapi.user.UserRepository;
-import dev.layla.notesapi.note.dto.UpdateNoteRequest;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,10 +46,8 @@ class NoteControllerIntegrationTest {
 
     @Test
     void postNotes_shouldReturn201_andCreatedNote() throws Exception {
-        CreateNoteRequest req = new CreateNoteRequest();
-        req.setTitle("My first note");
-        req.setContent("Hello Spring Boot");
-        req.setUserId(userId);
+        // Usando constructor de record
+        CreateNoteRequest req = new CreateNoteRequest("My first note", "Hello Spring Boot", userId);
 
         mockMvc.perform(post("/notes")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -65,9 +63,8 @@ class NoteControllerIntegrationTest {
 
     @Test
     void postNotes_shouldReturn400_whenTitleMissing() throws Exception {
-        CreateNoteRequest req = new CreateNoteRequest();
-        req.setContent("No title");
-        req.setUserId(userId);
+        // title es null, debería fallar validación
+        CreateNoteRequest req = new CreateNoteRequest(null, "No title", userId);
 
         mockMvc.perform(post("/notes")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -101,10 +98,8 @@ class NoteControllerIntegrationTest {
         User owner = userRepository.findById(userId).orElseThrow();
         Note saved = noteRepository.save(new Note("Old title", "Old content", owner));
 
-        UpdateNoteRequest req = new UpdateNoteRequest();
-        req.setTitle("New title");
-        req.setContent("New content");
-        req.setArchived(true);
+        // Usando constructor de record
+        UpdateNoteRequest req = new UpdateNoteRequest("New title", "New content", true);
 
         mockMvc.perform(put("/notes/{id}", saved.getId())
                 .contentType(MediaType.APPLICATION_JSON)
@@ -120,8 +115,7 @@ class NoteControllerIntegrationTest {
 
     @Test
     void putNote_shouldReturn404_whenNotExists() throws Exception {
-        UpdateNoteRequest req = new UpdateNoteRequest();
-        req.setTitle("Doesn't matter");
+        UpdateNoteRequest req = new UpdateNoteRequest("Doesn't matter", null, null);
 
         mockMvc.perform(put("/notes/{id}", 999999L)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -152,5 +146,4 @@ class NoteControllerIntegrationTest {
                 .andExpect(jsonPath("$.message", containsString("was not found")))
                 .andExpect(jsonPath("$.timestamp", notNullValue()));
     }
-
 }

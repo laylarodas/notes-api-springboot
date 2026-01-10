@@ -30,10 +30,10 @@ public class NoteService {
     }
 
     public NoteResponse create(CreateNoteRequest request) {
-        User owner = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new UserNotFoundException(request.getUserId()));
+        User owner = userRepository.findById(request.userId())
+                .orElseThrow(() -> new UserNotFoundException(request.userId()));
 
-        Note note = new Note(request.getTitle(), request.getContent(), owner);
+        Note note = new Note(request.title(), request.content(), owner);
         Note saved = noteRepository.save(note);
 
         return noteMapper.toResponse(saved);
@@ -68,16 +68,16 @@ public class NoteService {
         Note note = noteRepository.findById(id)
                 .orElseThrow(() -> new NoteNotFoundException(id));
 
-        if (request.getTitle() != null && !request.getTitle().isBlank()) {
-            note.setTitle(request.getTitle());
+        if (request.title() != null && !request.title().isBlank()) {
+            note.setTitle(request.title());
         }
 
-        if (request.getContent() != null) {
-            note.setContent(request.getContent());
+        if (request.content() != null) {
+            note.setContent(request.content());
         }
 
-        if (request.getArchived() != null) {
-            note.setArchived(request.getArchived());
+        if (request.archived() != null) {
+            note.setArchived(request.archived());
         }
 
         return noteMapper.toResponse(noteRepository.save(note));
@@ -98,16 +98,16 @@ public class NoteService {
             throw new NoteAccessDeniedException(noteId, userId);
         }
 
-        if (request.getTitle() != null && !request.getTitle().isBlank()) {
-            note.setTitle(request.getTitle());
+        if (request.title() != null && !request.title().isBlank()) {
+            note.setTitle(request.title());
         }
 
-        if (request.getContent() != null) {
-            note.setContent(request.getContent());
+        if (request.content() != null) {
+            note.setContent(request.content());
         }
 
-        if (request.getArchived() != null) {
-            note.setArchived(request.getArchived());
+        if (request.archived() != null) {
+            note.setArchived(request.archived());
         }
 
         Note saved = noteRepository.save(note);
@@ -133,7 +133,30 @@ public class NoteService {
 
     public NoteResponse createForUser(Long userId, CreateNoteRequest request) {
         User owner = userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException(userId));
-        Note saved = noteRepository.save(new Note(request.getTitle(), request.getContent(), owner));
+        Note saved = noteRepository.save(new Note(request.title(), request.content(), owner));
         return noteMapper.toResponse(saved);
+    }
+
+    /**
+     * Busca notas por título o contenido (case-insensitive).
+     * Opcionalmente puede filtrar por userId.
+     *
+     * @param query  Texto a buscar en título o contenido
+     * @param userId (Opcional) Filtrar por usuario
+     * @param pageable Configuración de paginación
+     * @return Página de notas que coinciden con la búsqueda
+     */
+    public Page<NoteResponse> search(String query, Long userId, Pageable pageable) {
+        Page<Note> page;
+
+        if (userId != null) {
+            // Validar que el usuario existe
+            userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException(userId));
+            page = noteRepository.searchByUserAndTitleOrContent(userId, query, pageable);
+        } else {
+            page = noteRepository.searchByTitleOrContent(query, pageable);
+        }
+
+        return page.map(noteMapper::toResponse);
     }
 }

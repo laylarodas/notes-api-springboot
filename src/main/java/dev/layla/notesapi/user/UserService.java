@@ -22,7 +22,7 @@ public class UserService {
     }
 
     public UserResponse create(CreateUserRequest request) {
-        User user = new User(request.getName(), request.getEmail());
+        User user = new User(request.name(), request.email());
         User saved = userRepository.save(user);
         return userMapper.toResponse(saved);
     }
@@ -43,12 +43,12 @@ public class UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException(id));
 
-        if (request.getName() != null && !request.getName().isBlank()) {
-            user.setName(request.getName());
+        if (request.name() != null && !request.name().isBlank()) {
+            user.setName(request.name());
         }
 
-        if (request.getEmail() != null && !request.getEmail().isBlank()) {
-            user.setEmail(request.getEmail());
+        if (request.email() != null && !request.email().isBlank()) {
+            user.setEmail(request.email());
         }
 
         User saved = userRepository.save(user);

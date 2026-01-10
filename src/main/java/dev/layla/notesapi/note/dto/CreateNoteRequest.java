@@ -1,44 +1,20 @@
 package dev.layla.notesapi.note.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
-public class CreateNoteRequest {
+/**
+ * DTO para crear una nota.
+ * Las validaciones se aplican directamente en los componentes del record.
+ */
+public record CreateNoteRequest(
+        @NotBlank(message = "title is required")
+        @Size(max = 200, message = "title must be at most 200 characters")
+        String title,
 
-    @NotBlank(message = "title is required")
-    @Size(max = 200, message = "title must be at most 200 characters")
-    private String title;
+        String content,
 
-    private String content;
-
-    public CreateNoteRequest() {
-    }
-
-    public String getTitle() {
-        return title;
-    }
-
-    public String getContent() {
-        return content;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
-    public void setContent(String content) {
-        this.content = content;
-    }
-
-    @NotNull(message = "userId is required")
-    private Long userId;
-
-    public Long getUserId() {
-        return userId;
-    }
-
-    public void setUserId(Long userId) {
-        this.userId = userId;
-    }
-}
+        @NotNull(message = "userId is required")
+        Long userId
+) {}
