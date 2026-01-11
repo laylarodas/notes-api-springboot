@@ -1,8 +1,10 @@
 package dev.layla.notesapi.common;
 
+import dev.layla.notesapi.auth.exception.EmailAlreadyExistsException;
+import dev.layla.notesapi.auth.exception.InvalidCredentialsException;
 import dev.layla.notesapi.note.exception.NoteNotFoundException;
-import dev.layla.notesapi.user.exception.UserNotFoundException;
 import dev.layla.notesapi.note.exception.NoteAccessDeniedException;
+import dev.layla.notesapi.user.exception.UserNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -76,6 +78,26 @@ public class GlobalExceptionHandler {
                 ex.getMessage(),
                 LocalDateTime.now());
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+    }
+
+    // ========== ERRORES DE AUTENTICACIÓN ==========
+
+    @ExceptionHandler(EmailAlreadyExistsException.class)
+    public ResponseEntity<ApiError> handleEmailAlreadyExists(EmailAlreadyExistsException ex) {
+        ApiError body = new ApiError(
+                HttpStatus.CONFLICT.value(),
+                ex.getMessage(),
+                LocalDateTime.now());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ApiError> handleInvalidCredentials(InvalidCredentialsException ex) {
+        ApiError body = new ApiError(
+                HttpStatus.UNAUTHORIZED.value(),
+                ex.getMessage(),
+                LocalDateTime.now());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body);
     }
 
     // ========== ERROR GENÉRICO ==========
