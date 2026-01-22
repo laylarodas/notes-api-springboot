@@ -2,21 +2,29 @@ package dev.layla.notesapi.note;
 
 import dev.layla.notesapi.note.dto.CreateNoteRequest;
 import dev.layla.notesapi.note.dto.NoteResponse;
+import dev.layla.notesapi.user.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import dev.layla.notesapi.note.dto.UpdateNoteRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.web.bind.annotation.RequestParam;
 
+/**
+ * Controller para gestión de notas.
+ * Todos los endpoints requieren autenticación JWT.
+ * Las notas solo son accesibles por su propietario.
+ */
 @RestController
 @RequestMapping("/notes")
-@Tag(name = "Notes", description = "Gestión de notas")
+@Tag(name = "Notes", description = "Gestión de notas del usuario autenticado")
+@SecurityRequirement(name = "bearerAuth")
 public class NoteController {
 
     private final NoteService noteService;
@@ -25,56 +33,77 @@ public class NoteController {
         this.noteService = noteService;
     }
 
+    /**
+     * Crea una nueva nota para el usuario autenticado.
+     * El userId se obtiene automáticamente del token JWT.
+     */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Crear nota", description = "Crea una nueva nota")
-    public NoteResponse create(@Valid @RequestBody CreateNoteRequest request) {
-        return noteService.create(request);
+    @Operation(summary = "Crear nota", description = "Crea una nueva nota para el usuario autenticado")
+    public NoteResponse create(
+            @AuthenticationPrincipal User currentUser,
+            @Valid @RequestBody CreateNoteRequest request) {
+        return noteService.createForUser(currentUser.getId(), request);
     }
 
     /**
-     * Endpoint de búsqueda - DEBE ir ANTES de /{id} para evitar conflicto de rutas.
-     * Spring podría interpretar "search" como un ID si el orden fuera diferente.
+     * Obtiene todas las notas del usuario autenticado.
      */
-    @GetMapping("/search")
-    @Operation(summary = "Buscar notas", description = "Busca notas por título o contenido (case-insensitive)")
-    public Page<NoteResponse> search(
-            @Parameter(description = "Texto a buscar en título o contenido")
-            @RequestParam String query,
-            @Parameter(description = "Filtrar por ID de usuario (opcional)")
-            @RequestParam(required = false) Long userId,
-            @PageableDefault(size = 10) Pageable pageable) {
-        return noteService.search(query, userId, pageable);
-    }
-
-    @GetMapping("/{id}")
-    @Operation(summary = "Obtener nota", description = "Obtiene una nota por su ID")
-    public NoteResponse getById(@PathVariable Long id) {
-        return noteService.getById(id);
-    }
-
-    @PutMapping("/{id}")
-    @Operation(summary = "Actualizar nota", description = "Actualiza una nota existente")
-    public NoteResponse update(@PathVariable Long id, @Valid @RequestBody UpdateNoteRequest request) {
-        return noteService.update(id, request);
-    }
-
-    @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Eliminar nota", description = "Elimina una nota por su ID")
-    public void delete(@PathVariable Long id) {
-        noteService.delete(id);
-    }
-
     @GetMapping
-    @Operation(summary = "Listar notas", description = "Obtiene todas las notas con filtros opcionales")
-    public Page<NoteResponse> getAll(
-            @Parameter(description = "Filtrar por ID de usuario")
-            @RequestParam(required = false) Long userId,
+    @Operation(summary = "Listar mis notas", description = "Obtiene todas las notas del usuario autenticado")
+    public Page<NoteResponse> getMyNotes(
+            @AuthenticationPrincipal User currentUser,
             @Parameter(description = "Filtrar por estado de archivo")
             @RequestParam(required = false) Boolean archived,
             @PageableDefault(size = 10) Pageable pageable) {
-        return noteService.getAll(userId, archived, pageable);
+        return noteService.getAll(currentUser.getId(), archived, pageable);
     }
 
+    /**
+     * Busca notas del usuario autenticado por título o contenido.
+     */
+    @GetMapping("/search")
+    @Operation(summary = "Buscar mis notas", description = "Busca en las notas del usuario autenticado por título o contenido")
+    public Page<NoteResponse> searchMyNotes(
+            @AuthenticationPrincipal User currentUser,
+            @Parameter(description = "Texto a buscar en título o contenido")
+            @RequestParam String query,
+            @PageableDefault(size = 10) Pageable pageable) {
+        return noteService.search(query, currentUser.getId(), pageable);
+    }
+
+    /**
+     * Obtiene una nota por ID (solo si pertenece al usuario autenticado).
+     */
+    @GetMapping("/{id}")
+    @Operation(summary = "Obtener nota", description = "Obtiene una nota por su ID (debe ser del usuario autenticado)")
+    public NoteResponse getById(
+            @AuthenticationPrincipal User currentUser,
+            @PathVariable Long id) {
+        return noteService.getByIdForUser(currentUser.getId(), id);
+    }
+
+    /**
+     * Actualiza una nota (solo si pertenece al usuario autenticado).
+     */
+    @PutMapping("/{id}")
+    @Operation(summary = "Actualizar nota", description = "Actualiza una nota existente (debe ser del usuario autenticado)")
+    public NoteResponse update(
+            @AuthenticationPrincipal User currentUser,
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateNoteRequest request) {
+        return noteService.updateForUser(currentUser.getId(), id, request);
+    }
+
+    /**
+     * Elimina una nota (solo si pertenece al usuario autenticado).
+     */
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Eliminar nota", description = "Elimina una nota por su ID (debe ser del usuario autenticado)")
+    public void delete(
+            @AuthenticationPrincipal User currentUser,
+            @PathVariable Long id) {
+        noteService.deleteForUser(currentUser.getId(), id);
+    }
 }

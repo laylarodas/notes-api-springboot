@@ -1,5 +1,6 @@
 package dev.layla.notesapi.config;
 
+import dev.layla.notesapi.auth.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -8,31 +9,45 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 /**
- * Configuración de Spring Security.
+ * Configuración de Spring Security con JWT.
  * 
- * IMPORTANTE: Esta es una configuración TEMPORAL que permite todas las peticiones.
- * La iremos modificando paso a paso para agregar autenticación JWT.
+ * Rutas públicas (no requieren token):
+ * - /auth/** (login, registro)
+ * - /actuator/** (health checks)
+ * - /swagger-ui/**, /v3/api-docs/** (documentación)
+ * - /h2-console/** (consola de BD en desarrollo)
+ * 
+ * Rutas protegidas (requieren token JWT válido):
+ * - /notes/**
+ * - /users/**
+ * - Cualquier otra ruta
  */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
+    private final JwtAuthenticationFilter jwtAuthFilter;
+
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter) {
+        this.jwtAuthFilter = jwtAuthFilter;
+    }
+
     /**
      * Configura la cadena de filtros de seguridad.
-     * 
-     * Por ahora:
-     * - Deshabilitamos CSRF (no necesario en APIs stateless con JWT)
-     * - Configuramos sesiones como STATELESS (no guardamos estado en servidor)
-     * - Permitimos TODAS las peticiones (temporal, lo cambiaremos después)
      */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             // Deshabilitar CSRF - no es necesario para APIs REST con JWT
-            // CSRF protege contra ataques en aplicaciones con cookies/sesiones
             .csrf(csrf -> csrf.disable())
+            
+            // Permitir frames del mismo origen (necesario para H2 Console)
+            .headers(headers -> headers
+                .frameOptions(frame -> frame.sameOrigin())
+            )
             
             // Configurar manejo de sesiones como STATELESS
             // El servidor NO guardará sesiones - toda la info viene en el JWT
@@ -41,21 +56,40 @@ public class SecurityConfig {
             )
             
             // Configurar autorización de peticiones
-            // TEMPORAL: Permitimos todo. Después protegeremos rutas específicas.
             .authorizeHttpRequests(auth -> auth
-                .anyRequest().permitAll()
-            );
+                // Rutas públicas - Autenticación
+                .requestMatchers("/auth/**").permitAll()
+                
+                // Rutas públicas - Actuator (health checks)
+                .requestMatchers("/actuator/**").permitAll()
+                
+                // Rutas públicas - Swagger/OpenAPI
+                .requestMatchers(
+                    "/swagger-ui/**",
+                    "/swagger-ui.html",
+                    "/v3/api-docs/**",
+                    "/swagger-resources/**",
+                    "/webjars/**"
+                ).permitAll()
+                
+                // Rutas públicas - H2 Console (solo desarrollo)
+                .requestMatchers("/h2-console/**").permitAll()
+                
+                // Ruta raíz pública
+                .requestMatchers("/").permitAll()
+                
+                // Todas las demás rutas requieren autenticación
+                .anyRequest().authenticated()
+            )
+            
+            // Agregar el filtro JWT ANTES del filtro de autenticación estándar
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         
         return http.build();
     }
 
     /**
      * Bean para encriptar contraseñas con BCrypt.
-     * 
-     * BCrypt es un algoritmo de hashing diseñado para passwords:
-     * - Incluye "salt" automático (protege contra rainbow tables)
-     * - Es lento a propósito (dificulta ataques de fuerza bruta)
-     * - El factor de coste (strength) se puede ajustar
      */
     @Bean
     public PasswordEncoder passwordEncoder() {

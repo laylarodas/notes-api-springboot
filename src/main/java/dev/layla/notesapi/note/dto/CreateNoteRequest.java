@@ -1,20 +1,16 @@
 package dev.layla.notesapi.note.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 /**
  * DTO para crear una nota.
- * Las validaciones se aplican directamente en los componentes del record.
+ * El userId ya no es necesario porque se obtiene del token JWT.
  */
 public record CreateNoteRequest(
         @NotBlank(message = "title is required")
         @Size(max = 200, message = "title must be at most 200 characters")
         String title,
 
-        String content,
-
-        @NotNull(message = "userId is required")
-        Long userId
+        String content
 ) {}

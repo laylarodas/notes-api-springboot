@@ -1,6 +1,7 @@
 package dev.layla.notesapi.note;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.layla.notesapi.auth.JwtService;
 import dev.layla.notesapi.note.dto.CreateNoteRequest;
 import dev.layla.notesapi.note.dto.UpdateNoteRequest;
 import dev.layla.notesapi.user.User;
@@ -31,25 +32,30 @@ class NoteControllerIntegrationTest {
     UserRepository userRepository;
     @Autowired
     NoteRepository noteRepository;
+    @Autowired
+    JwtService jwtService;
 
-    private Long userId;
+    private User testUser;
+    private String jwtToken;
 
     @BeforeEach
     void setup() {
         noteRepository.deleteAll();
         userRepository.deleteAll();
 
-        User user = new User("Layla", "layla@example.com", "password123");
-        user = userRepository.save(user);
-        userId = user.getId();
+        testUser = new User("Layla", "layla@example.com", "password123");
+        testUser = userRepository.save(testUser);
+        
+        // Generar token JWT para el usuario de prueba
+        jwtToken = jwtService.generateToken(testUser);
     }
 
     @Test
     void postNotes_shouldReturn201_andCreatedNote() throws Exception {
-        // Usando constructor de record
-        CreateNoteRequest req = new CreateNoteRequest("My first note", "Hello Spring Boot", userId);
+        CreateNoteRequest req = new CreateNoteRequest("My first note", "Hello Spring Boot");
 
         mockMvc.perform(post("/notes")
+                .header("Authorization", "Bearer " + jwtToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isCreated())
@@ -63,22 +69,31 @@ class NoteControllerIntegrationTest {
 
     @Test
     void postNotes_shouldReturn400_whenTitleMissing() throws Exception {
-        // title es null, debería fallar validación
-        CreateNoteRequest req = new CreateNoteRequest(null, "No title", userId);
+        CreateNoteRequest req = new CreateNoteRequest(null, "No title");
 
         mockMvc.perform(post("/notes")
+                .header("Authorization", "Bearer " + jwtToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
-    void getNoteById_shouldReturn200_whenExists() throws Exception {
-        // Arrange: creamos una nota via repo para testear GET
-        Note saved = noteRepository
-                .save(new Note("Saved note", "From DB", userRepository.findById(userId).orElseThrow()));
+    void postNotes_shouldReturn401_whenNoToken() throws Exception {
+        CreateNoteRequest req = new CreateNoteRequest("My note", "Content");
 
-        mockMvc.perform(get("/notes/{id}", saved.getId()))
+        mockMvc.perform(post("/notes")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void getNoteById_shouldReturn200_whenExists() throws Exception {
+        Note saved = noteRepository.save(new Note("Saved note", "From DB", testUser));
+
+        mockMvc.perform(get("/notes/{id}", saved.getId())
+                .header("Authorization", "Bearer " + jwtToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(saved.getId()))
                 .andExpect(jsonPath("$.title").value("Saved note"));
@@ -86,7 +101,8 @@ class NoteControllerIntegrationTest {
 
     @Test
     void getNoteById_shouldReturn404_whenNotExists() throws Exception {
-        mockMvc.perform(get("/notes/{id}", 999999L))
+        mockMvc.perform(get("/notes/{id}", 999999L)
+                .header("Authorization", "Bearer " + jwtToken))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.message", containsString("was not found")))
@@ -94,14 +110,25 @@ class NoteControllerIntegrationTest {
     }
 
     @Test
-    void putNote_shouldUpdateFields_whenExists() throws Exception {
-        User owner = userRepository.findById(userId).orElseThrow();
-        Note saved = noteRepository.save(new Note("Old title", "Old content", owner));
+    void getNoteById_shouldReturn403_whenNoteOwnedByOtherUser() throws Exception {
+        // Crear otro usuario y su nota
+        User otherUser = userRepository.save(new User("Other", "other@example.com", "password"));
+        Note otherNote = noteRepository.save(new Note("Other's note", "Not yours", otherUser));
 
-        // Usando constructor de record
+        // Intentar acceder con el token del primer usuario
+        mockMvc.perform(get("/notes/{id}", otherNote.getId())
+                .header("Authorization", "Bearer " + jwtToken))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void putNote_shouldUpdateFields_whenExists() throws Exception {
+        Note saved = noteRepository.save(new Note("Old title", "Old content", testUser));
+
         UpdateNoteRequest req = new UpdateNoteRequest("New title", "New content", true);
 
         mockMvc.perform(put("/notes/{id}", saved.getId())
+                .header("Authorization", "Bearer " + jwtToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
@@ -118,6 +145,7 @@ class NoteControllerIntegrationTest {
         UpdateNoteRequest req = new UpdateNoteRequest("Doesn't matter", null, null);
 
         mockMvc.perform(put("/notes/{id}", 999999L)
+                .header("Authorization", "Bearer " + jwtToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isNotFound())
@@ -128,19 +156,21 @@ class NoteControllerIntegrationTest {
 
     @Test
     void deleteNote_shouldReturn204_andThenNoteIsGone() throws Exception {
-        User owner = userRepository.findById(userId).orElseThrow();
-        Note saved = noteRepository.save(new Note("To delete", "Bye", owner));
+        Note saved = noteRepository.save(new Note("To delete", "Bye", testUser));
 
-        mockMvc.perform(delete("/notes/{id}", saved.getId()))
+        mockMvc.perform(delete("/notes/{id}", saved.getId())
+                .header("Authorization", "Bearer " + jwtToken))
                 .andExpect(status().isNoContent());
 
-        mockMvc.perform(get("/notes/{id}", saved.getId()))
+        mockMvc.perform(get("/notes/{id}", saved.getId())
+                .header("Authorization", "Bearer " + jwtToken))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     void deleteNote_shouldReturn404_whenNotExists() throws Exception {
-        mockMvc.perform(delete("/notes/{id}", 999999L))
+        mockMvc.perform(delete("/notes/{id}", 999999L)
+                .header("Authorization", "Bearer " + jwtToken))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.message", containsString("was not found")))

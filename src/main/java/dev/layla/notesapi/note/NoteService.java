@@ -29,9 +29,13 @@ public class NoteService {
         this.userRepository = userRepository;
     }
 
-    public NoteResponse create(CreateNoteRequest request) {
-        User owner = userRepository.findById(request.userId())
-                .orElseThrow(() -> new UserNotFoundException(request.userId()));
+    /**
+     * @deprecated Usar createForUser() que obtiene el userId del token JWT
+     */
+    @Deprecated
+    public NoteResponse create(Long userId, CreateNoteRequest request) {
+        User owner = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException(userId));
 
         Note note = new Note(request.title(), request.content(), owner);
         Note saved = noteRepository.save(note);
@@ -59,6 +63,20 @@ public class NoteService {
     public NoteResponse getById(Long id) {
         Note note = noteRepository.findById(id)
                 .orElseThrow(() -> new NoteNotFoundException(id));
+
+        return noteMapper.toResponse(note);
+    }
+
+    /**
+     * Obtiene una nota por ID verificando que pertenezca al usuario.
+     */
+    public NoteResponse getByIdForUser(Long userId, Long noteId) {
+        Note note = noteRepository.findById(noteId)
+                .orElseThrow(() -> new NoteNotFoundException(noteId));
+
+        if (!note.getOwner().getId().equals(userId)) {
+            throw new NoteAccessDeniedException(noteId, userId);
+        }
 
         return noteMapper.toResponse(note);
     }

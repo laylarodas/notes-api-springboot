@@ -30,41 +30,43 @@ class NoteServiceTest {
     }
 
     @Test
-    void create_shouldCreateNote_whenUserExists() {
-        // Arrange - Usando constructor de record
-        CreateNoteRequest req = new CreateNoteRequest("Test note", "Hello", 1L);
+    void createForUser_shouldCreateNote_whenUserExists() {
+        // Arrange
+        Long userId = 1L;
+        CreateNoteRequest req = new CreateNoteRequest("Test note", "Hello");
 
         User owner = new User("Layla", "layla@example.com", "password123");
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(owner));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(owner));
 
         // Simulamos el guardado: devolvemos una Note "guardada"
         Note saved = new Note("Test note", "Hello", owner);
         when(noteRepository.save(any(Note.class))).thenReturn(saved);
 
         // Act
-        var res = noteService.create(req);
+        var res = noteService.createForUser(userId, req);
 
-        // Assert - Usando accesores de record (sin "get")
+        // Assert
         assertEquals("Test note", res.title());
         assertEquals("Hello", res.content());
         assertFalse(res.archived());
 
-        verify(userRepository).findById(1L);
+        verify(userRepository).findById(userId);
         verify(noteRepository).save(any(Note.class));
     }
 
     @Test
-    void create_shouldThrowUserNotFound_whenUserDoesNotExist() {
-        // Arrange - Usando constructor de record
-        CreateNoteRequest req = new CreateNoteRequest("Test note", "Hello", 999L);
+    void createForUser_shouldThrowUserNotFound_whenUserDoesNotExist() {
+        // Arrange
+        Long userId = 999L;
+        CreateNoteRequest req = new CreateNoteRequest("Test note", "Hello");
 
-        when(userRepository.findById(999L)).thenReturn(Optional.empty());
+        when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
         // Act + Assert
-        assertThrows(UserNotFoundException.class, () -> noteService.create(req));
+        assertThrows(UserNotFoundException.class, () -> noteService.createForUser(userId, req));
 
-        verify(userRepository).findById(999L);
+        verify(userRepository).findById(userId);
         verify(noteRepository, never()).save(any());
     }
 }
